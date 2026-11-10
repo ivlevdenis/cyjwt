@@ -1,3 +1,12 @@
+# cyjwt release: build sdist + wheel on a v* tag and publish to PyPI.
+#
+#   git tag -a v0.2.0 -m "cyjwt 0.2.0" && git push origin v0.2.0
+#
+# Trigger: a v* tag; workflow_dispatch builds without publishing.
+# Publishing uses the PyPI API token from the repository secret PYPI_API_TOKEN.
+# Alternative: Trusted Publishing (OIDC, no secret) — drop `password` here and
+# configure a publisher on pypi.org: project cyjwt, owner ivlevdenis, repo cyjwt,
+# workflow release.yml, environment pypi.
 name: Release
 
 on:
@@ -55,14 +64,16 @@ jobs:
       name: pypi
       url: https://pypi.org/project/cyjwt/
     permissions:
-      id-token: write
       contents: read
     steps:
       - uses: actions/download-artifact@v4
         with:
           name: dist
           path: dist/
-      - name: Publish distributions to PyPI
+      - name: Publish distributions to PyPI (API token)
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist/
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          # a repeated release run must not fail on "file already exists"
+          skip-existing: true

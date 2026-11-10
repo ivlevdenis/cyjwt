@@ -58,12 +58,15 @@ Releases are built and published by `.github/workflows/release.yml`:
 3. The workflow builds sdist + wheel, runs `twine check`, verifies that the tag
    matches the package version, and publishes to PyPI.
 
-Publishing uses PyPI trusted publishing (OIDC), so no API token is stored in the
-repository. PyPI must have a trusted publisher configured for:
+Publishing uses a PyPI API token read from the repository secret
+`PYPI_API_TOKEN` (Settings -> Secrets and variables -> Actions). Create a
+project-scoped token on PyPI (Account settings -> API tokens, scope: project
+`cyjwt`) and store it as that secret. No other credentials are needed; a
+repeated run for the same version is tolerated (`skip-existing`).
 
-- owner/repository: `ivlevdenis/cyjwt`;
-- workflow: `release.yml`;
-- environment: `pypi`.
+Trusted Publishing (OIDC, no secret) is supported by the same workflow: remove
+the `password` input and configure a publisher on PyPI with project `cyjwt`,
+owner `ivlevdenis`, repo `cyjwt`, workflow `release.yml`, environment `pypi`.
 
 To re-run a release for an existing tag, start the `Release` workflow manually
 from that tag (`workflow_dispatch`).
