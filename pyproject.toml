@@ -1,0 +1,93 @@
+[build-system]
+requires = ["setuptools>=77", "Cython>=3.0.11"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cyjwt"
+dynamic = ["version"]
+description = "Fast PyJWT-compatible JSON Web Token implementation with a Cython core (HS*/RS*/PS*/ES*/EdDSA)"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Denis Ivlev", email = "di-erz@yandex.ru" }]
+keywords = ["cython", "jwt", "jws", "pyjwt", "zero-dependencies", "performance"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
+    "Programming Language :: Cython",
+    "Topic :: Security",
+    "Topic :: Software Development :: Libraries",
+    "Typing :: Typed",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/ivlevdenis/cyjwt"
+Source = "https://github.com/ivlevdenis/cyjwt"
+Issues = "https://github.com/ivlevdenis/cyjwt/issues"
+Changelog = "https://github.com/ivlevdenis/cyjwt/blob/main/CHANGELOG.md"
+
+[project.optional-dependencies]
+crypto = ["cryptography>=3.4"]
+test = ["pytest>=8.0"]
+dev = [
+    "build>=1.2",
+    "cryptography>=3.4",
+    "cython>=3.0.11",
+    "mypy>=1.10",
+    "pyjwt==2.15.1",
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.5",
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+# pyi/py.typed: typing for downstream users; pyx/pxd: cimport for downstream Cython code.
+cyjwt = ["py.typed", "*.pyi", "*.pyx", "*.pxd"]
+
+[tool.setuptools.exclude-package-data]
+# The cythonized .c stays in the sdist (buildable without Cython) but is not
+# shipped in the wheel: the wheel already contains the compiled extension.
+cyjwt = ["*.c"]
+
+[tool.setuptools.dynamic]
+version = { attr = "cyjwt._version.__version__" }
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"
+
+[tool.coverage.run]
+source = ["cyjwt"]
+branch = true
+
+[tool.mypy]
+python_version = "3.12"
+mypy_path = "src"
+strict = true
+files = ["src/cyjwt"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["src", "tests", "benchmarks"]
+
+[tool.ruff.lint]
+select = ["B", "E", "F", "I", "RUF", "SIM", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+# Benchmarks print numbers, and chart labels intentionally use the × ratio glyph.
+"benchmarks/*" = ["RUF001", "T201"]

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="790" height="206" viewBox="0 0 790 206" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">
+<rect width="790" height="206" fill="#ffffff"/>
+<text x="22" y="34" font-size="19" font-weight="700" fill="#111">ES256 decode — key object</text>
+<text x="22" y="56" font-size="12" fill="#555">best of 3 rounds</text>
+<line x1="310.0" y1="66" x2="310.0" y2="152" stroke="#ececec" stroke-width="1"/>
+<text x="310.0" y="168" font-size="10.5" fill="#666" text-anchor="middle">×0</text>
+<line x1="415.0" y1="66" x2="415.0" y2="152" stroke="#ececec" stroke-width="1"/>
+<text x="415.0" y="168" font-size="10.5" fill="#666" text-anchor="middle">×0.5</text>
+<line x1="520.0" y1="66" x2="520.0" y2="152" stroke="#c0392b" stroke-width="1.6" stroke-dasharray="5 3"/>
+<text x="520.0" y="168" font-size="10.5" fill="#666" text-anchor="middle">×1</text>
+<line x1="625.0" y1="66" x2="625.0" y2="152" stroke="#ececec" stroke-width="1"/>
+<text x="625.0" y="168" font-size="10.5" fill="#666" text-anchor="middle">×1.5</text>
+<line x1="730.0" y1="66" x2="730.0" y2="152" stroke="#ececec" stroke-width="1"/>
+<text x="730.0" y="168" font-size="10.5" fill="#666" text-anchor="middle">×2</text>
+<rect x="18" y="101" width="10" height="10" rx="2" fill="#c0392b"/>
+<text x="34" y="111" font-size="12" fill="#2b2b2b">cyjwt (Cython core)</text>
+<rect x="310" y="96" width="247.6" height="22" rx="3" fill="#c0392b"/>
+<text x="563.6" y="111" font-size="11.5" fill="#333">×1.18</text>
+<text x="610.1" y="111" font-size="11" fill="#666">15 467</text>
+<rect x="18" y="131" width="10" height="10" rx="2" fill="#2c3e50"/>
+<text x="34" y="141" font-size="12" fill="#2b2b2b" font-weight="700">PyJWT 2.15</text>
+<rect x="310" y="126" width="210.0" height="22" rx="3" fill="#2c3e50"/>
+<text x="526.0" y="141" font-size="11.5" fill="#c0392b" font-weight="700">×1.00</text>
+<text x="572.5" y="141" font-size="11" fill="#666">13 117</text>
+<text x="622.1" y="141" font-size="9.5" fill="#c0392b">← baseline</text>
+<text x="22" y="190" font-size="11" fill="#111" font-weight="600">bars: × to PyJWT=1.00, then absolute op/s (higher is better)</text>
+</svg>
