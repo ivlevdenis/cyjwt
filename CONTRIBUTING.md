@@ -55,8 +55,10 @@ Releases are built and published by `.github/workflows/release.yml`:
    `Unreleased`, and commit.
 2. Create an annotated tag on that commit and push it:
    `git tag -a vX.Y.Z -m "cyjwt X.Y.Z" && git push origin vX.Y.Z`.
-3. The workflow builds sdist + wheel, runs `twine check`, verifies that the tag
-   matches the package version, and publishes to PyPI.
+3. The workflow builds the sdist and manylinux wheels for cp312-cp315 with
+   cibuildwheel (`manylinux_2_28`, x86_64), verifies the tag matches the package
+   version, rejects non-portable wheel tags, runs `twine check`, and publishes to
+   PyPI. Other platforms install from the sdist.
 
 Publishing uses a PyPI API token read from the repository secret
 `PYPI_API_TOKEN` (Settings -> Secrets and variables -> Actions). Create a

@@ -1,4 +1,4 @@
-# cyjwt release: build sdist + wheel on a v* tag and publish to PyPI.
+# cyjwt release: build sdist + manylinux wheels on a v* tag and publish to PyPI.
 #
 #   git tag -a v0.2.0 -m "cyjwt 0.2.0" && git push origin v0.2.0
 #
@@ -7,6 +7,10 @@
 # Alternative: Trusted Publishing (OIDC, no secret) — drop `password` here and
 # configure a publisher on pypi.org: project cyjwt, owner ivlevdenis, repo cyjwt,
 # workflow release.yml, environment pypi.
+#
+# Wheels are built with cibuildwheel inside manylinux_2_28 (glibc >= 2.28) for
+# cp312-cp315. PyPI rejects bare `linux_x86_64` wheels, so `python -m build
+# --wheel` on the runner is not used.
 name: Release
 
 on:
@@ -47,7 +51,40 @@ jobs:
             exit 1
           fi
       - run: pip install build twine
-      - run: python -m build
+      - name: Build sdist
+        run: python -m build --sdist --outdir dist
+      - name: Build manylinux wheels
+        uses: pypa/cibuildwheel@v4.3.5
+        with:
+          output-dir: dist
+        env:
+          CIBW_BUILD: >-
+            cp312-manylinux_x86_64
+            cp313-manylinux_x86_64
+            cp314-manylinux_x86_64
+            cp315-manylinux_x86_64
+          CIBW_ARCHS: x86_64
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
+      - name: Verify wheel platform tags
+        run: |
+          python - <<'PY'
+          import glob
+          import sys
+
+          dists = sorted(glob.glob("dist/*"))
+          print("built:", *dists, sep="\n  ")
+          bad = [
+              path
+              for path in dists
+              if path.endswith(".whl") and "manylinux" not in path
+          ]
+          if bad:
+              sys.exit(f"PyPI will reject non-portable wheel(s): {bad}")
+          if not any(path.endswith(".tar.gz") for path in dists):
+              sys.exit("sdist is missing")
+          if len([path for path in dists if path.endswith(".whl")]) != 4:
+              sys.exit("expected four cpXYZ-manylinux wheels")
+          PY
       - run: twine check dist/*
       - uses: actions/upload-artifact@v4
         with:
