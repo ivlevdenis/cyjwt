@@ -46,3 +46,24 @@ tables in `docs/benchmarks.md` if the numbers moved materially.
   either handle it meaningfully or re-raise it.
 - Update `CHANGELOG.md` for user-visible changes, and bump `_version.py` only in
   release commits.
+
+## Release
+
+Releases are built and published by `.github/workflows/release.yml`:
+
+1. Bump `src/cyjwt/_version.py`, move the `CHANGELOG.md` entries out of
+   `Unreleased`, and commit.
+2. Create an annotated tag on that commit and push it:
+   `git tag -a vX.Y.Z -m "cyjwt X.Y.Z" && git push origin vX.Y.Z`.
+3. The workflow builds sdist + wheel, runs `twine check`, verifies that the tag
+   matches the package version, and publishes to PyPI.
+
+Publishing uses PyPI trusted publishing (OIDC), so no API token is stored in the
+repository. PyPI must have a trusted publisher configured for:
+
+- owner/repository: `ivlevdenis/cyjwt`;
+- workflow: `release.yml`;
+- environment: `pypi`.
+
+To re-run a release for an existing tag, start the `Release` workflow manually
+from that tag (`workflow_dispatch`).
