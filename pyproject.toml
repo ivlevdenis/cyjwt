@@ -8,8 +8,8 @@ dynamic = ["version"]
 description = "Fast PyJWT-compatible JSON Web Token implementation with a Cython core (HS*/RS*/PS*/ES*/EdDSA)"
 readme = "README.md"
 requires-python = ">=3.12"
-license = "MIT"
-license-files = ["LICENSE"]
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 authors = [{ name = "Denis Ivlev", email = "di-erz@yandex.ru" }]
 keywords = ["cython", "jwt", "jws", "pyjwt", "zero-dependencies", "performance"]
 classifiers = [
