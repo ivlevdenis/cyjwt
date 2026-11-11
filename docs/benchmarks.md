@@ -41,19 +41,48 @@ charts; bars show cyjwt's ratio to it, then the absolute throughput.
 
 | Stage | cyjwt | PyJWT | Speedup |
 |---|---:|---:|---:|
-| `encode-hs256` | 109,545 | 65,197 | **1.68×** |
-| `decode-hs256` | 97,960 | 39,782 | **2.46×** |
-| `decode-hs256-claims` | 83,802 | 33,792 | **2.48×** |
-| `encode-hs256-1k` | 82,938 | 52,196 | **1.59×** |
-| `decode-hs256-1k` | 81,267 | 14,975 | **5.43×** |
-| `encode-hs512` | 99,830 | 61,726 | **1.62×** |
-| `decode-hs512` | 89,963 | 36,293 | **2.48×** |
-| `encode-rs256` | 2,225 | 2,220 | **1.00×** |
-| `decode-rs256` | 40,057 | 22,443 | **1.78×** |
-| `encode-es256` | 36,339 | 34,274 | **1.06×** |
-| `decode-es256` | 15,467 | 13,117 | **1.18×** |
-| `encode-eddsa` | 32,751 | 31,600 | **1.04×** |
-| `decode-eddsa` | 11,890 | 10,475 | **1.14×** |
+| `encode-hs256` | 112,206 | 65,254 | **1.72×** |
+| `decode-hs256` | 97,739 | 40,017 | **2.44×** |
+| `decode-hs256-claims` | 85,052 | 33,194 | **2.56×** |
+| `encode-hs256-1k` | 81,659 | 51,300 | **1.59×** |
+| `decode-hs256-1k` | 82,332 | 15,068 | **5.46×** |
+| `encode-hs512` | 99,384 | 62,810 | **1.58×** |
+| `decode-hs512` | 90,815 | 36,736 | **2.47×** |
+| `encode-rs256` | 2,218 | 2,198 | **1.01×** |
+| `decode-rs256` | 41,915 | 22,307 | **1.88×** |
+| `encode-es256` | 38,377 | 35,902 | **1.07×** |
+| `decode-es256` | 16,600 | 13,181 | **1.26×** |
+| `encode-eddsa` | 33,292 | 32,033 | **1.04×** |
+| `decode-eddsa` | 12,078 | 10,640 | **1.14×** |
+
+### CPU and memory per stage
+
+Every stage also records resource use. CPU time is `process_time()` (user +
+system) attributed to each series; both series share one process, so memory is
+stage-wide: peak `VmRSS` sampled every 10 ms, plus `RSS` growth and `PSS` after
+the stage. A single-threaded Python loop saturates one core, so utilisation is
+~100% for both variants; the useful number is CPU time per operation.
+
+| Stage | cyjwt µs CPU/op | PyJWT µs CPU/op | PyJWT / cyjwt |
+|---|---:|---:|---:|
+| `encode-hs256` | 9.08 | 15.48 | 1.71× |
+| `decode-hs256` | 10.38 | 25.20 | 2.43× |
+| `decode-hs256-claims` | 12.12 | 30.72 | 2.54× |
+| `encode-hs256-1k` | 12.41 | 19.93 | 1.61× |
+| `decode-hs256-1k` | 12.50 | 67.53 | 5.40× |
+| `encode-hs512` | 10.28 | 16.26 | 1.58× |
+| `decode-hs512` | 11.29 | 27.72 | 2.45× |
+| `encode-rs256` | 456.55 | 459.92 | 1.01× |
+| `decode-rs256` | 24.04 | 44.89 | 1.87× |
+| `encode-es256` | 27.34 | 28.91 | 1.06× |
+| `decode-es256` | 64.44 | 77.29 | 1.20× |
+| `encode-eddsa` | 31.02 | 32.07 | 1.03× |
+| `decode-eddsa` | 84.13 | 95.49 | 1.14× |
+
+Peak RSS stays at 36.9-37.1 MB for every stage (interpreter + `cryptography`
+import dominates), and RSS growth during a stage is at most 72 KB, i.e. the
+allocator reaches steady state with no per-stage leak. Raw numbers are in
+`benchmarks/results/stage-*.json` (`resources` object).
 
 ## Where the difference comes from
 
@@ -61,16 +90,16 @@ charts; bars show cyjwt's ratio to it, then the absolute throughput.
   base64url in one C loop, splits the compact token in one pass, and compares
   the HMAC in constant time without Python objects. PyJWT additionally runs a
   per-character Python loop over every base64url segment.
-- **HS decode, ~1 KB payload (5.43×):** that per-character loop is O(payload
+- **HS decode, ~1 KB payload (5.46×):** that per-character loop is O(payload
   length) in Python, while ours stays in C — the gap grows with the token.
 - **HS encode (1.6–1.7×):** base64url encoding is table-driven in C, and the
   payload encoder is a cached `json.JSONEncoder` instance; JSON serialization
   itself remains stdlib.
 - **RS256 encode (1.00×):** the RSA operation (~400 µs at 2048 bits) dominates
   and is identical in both libraries; only Python-layer overhead differs.
-- **ES256 / EdDSA (1.04–1.18×):** the signature/verification cost is
+- **ES256 / EdDSA (1.04–1.26×):** the signature/verification cost is
   `cryptography`'s, so the gain is limited to token parsing and JSON.
-- **RS256 decode (1.78×):** verification is ~21 µs, so the fixed Python-layer
+- **RS256 decode (1.88×):** verification is ~21 µs, so the fixed Python-layer
   savings are visible.
 
 ## Key parsing is not timed

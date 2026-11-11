@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Benchmark stages record CPU utilisation and CPU time per operation per series,
+  plus peak RSS (10 ms sampler), RSS growth and PSS after every stage; the data
+  is written to `benchmarks/results/*.json` and tabulated in
+  `docs/benchmarks.md`.
+
 ### Changed
 
 - Relicensed from MIT to Apache License 2.0 (see `LICENSE` and `NOTICE`).

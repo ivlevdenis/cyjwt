@@ -1,9 +1,11 @@
 """Benchmark runner: cyjwt vs PyJWT.
 
 Measures op/s per stage with ``timeit`` (auto-calibrated iteration counts, best
-of N rounds, series order alternated between rounds to spread machine drift),
-writes one ``benchmarks/results/stage-<name>.json`` per stage, then re-renders
-the charts in ``docs/img/charts``.
+of N rounds, series order alternated between rounds to spread machine drift).
+Alongside throughput it records, per stage, CPU utilisation per series
+(``process_time`` over wall time), CPU time per operation, peak RSS sampled
+every 10 ms during the stage and PSS after it. Results go to
+``benchmarks/results/stage-<name>.json``; charts are re-rendered afterwards.
 
 Usage::
 
@@ -15,9 +17,11 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import gc
 import json
 import platform
 import sys
+import threading
 import time
 import timeit
 import warnings
@@ -177,20 +181,80 @@ def _asymmetric_cases() -> list[Case]:
     return cases
 
 
-def measure(series: Series, rounds: int) -> dict[str, float]:
-    """Return best op/s per series, alternating series order between rounds."""
+def _rss_kb() -> int:
+    with open("/proc/self/status", encoding="ascii") as fh:
+        for line in fh:
+            if line.startswith("VmRSS:"):
+                return int(line.split()[1])
+    raise RuntimeError("VmRSS is missing from /proc/self/status")
+
+
+def _pss_kb() -> int:
+    with open("/proc/self/smaps_rollup", encoding="ascii") as fh:
+        for line in fh:
+            if line.startswith("Pss:"):
+                return int(line.split()[1])
+    raise RuntimeError("Pss is missing from /proc/self/smaps_rollup")
+
+
+class _RssSampler(threading.Thread):
+    """Sample VmRSS in the background and keep the peak for one stage."""
+
+    def __init__(self, interval: float = 0.01) -> None:
+        super().__init__(daemon=True)
+        self._interval = interval
+        self._stopped = threading.Event()
+        self.peak_kb = 0
+
+    def run(self) -> None:
+        while not self._stopped.is_set():
+            self.peak_kb = max(self.peak_kb, _rss_kb())
+            self._stopped.wait(self._interval)
+
+    def stop(self) -> int:
+        self._stopped.set()
+        self.join()
+        return self.peak_kb
+
+
+def measure(series: Series, rounds: int) -> tuple[dict[str, float], dict[str, dict[str, float]]]:
+    """Return best op/s per series plus CPU utilisation and CPU time per op.
+
+    Every timed call is wrapped with ``process_time``/``perf_counter`` so CPU
+    time is attributed to the series even though their order alternates.
+    """
     numbers = {name: timeit.Timer(fn).autorange()[0] for name, fn in series.items()}
     best = dict.fromkeys(series, 0.0)
+    cpu_seconds = dict.fromkeys(series, 0.0)
+    wall_seconds = dict.fromkeys(series, 0.0)
+    operations = dict.fromkeys(series, 0)
     for round_index in range(rounds):
         items = list(series.items())
         if round_index % 2:
             items.reverse()
         for name, fn in items:
             number = numbers[name]
+            cpu_before = time.process_time()
+            wall_before = time.perf_counter()
             elapsed = timeit.timeit(fn, number=number)
+            wall = max(time.perf_counter() - wall_before, elapsed)
+            cpu_seconds[name] += time.process_time() - cpu_before
+            wall_seconds[name] += wall
+            operations[name] += number
             if elapsed > 0:
                 best[name] = max(best[name], number / elapsed)
-    return best
+
+    cpu: dict[str, dict[str, float]] = {}
+    for name in series:
+        wall = wall_seconds[name]
+        ops = operations[name]
+        # The stages are single-threaded; the only extra thread is the 10 ms
+        # RSS sampler, so a ratio slightly above 1.0 is measurement noise.
+        cpu[name] = {
+            "pct": min(100.0, 100.0 * cpu_seconds[name] / wall) if wall else 0.0,
+            "us_per_op": 1e6 * cpu_seconds[name] / ops if ops else 0.0,
+        }
+    return best, cpu
 
 
 def _environment() -> dict[str, str]:
@@ -240,10 +304,28 @@ def main(argv: list[str] | None = None) -> int:
 
     for case in cases:
         started = time.perf_counter()
-        values = measure(case.series, args.rounds)
+        gc.collect()
+        rss_before = _rss_kb()
+        sampler = _RssSampler()
+        sampler.start()
+        try:
+            values, cpu = measure(case.series, args.rounds)
+        finally:
+            peak_rss = sampler.stop()
+        gc.collect()
+        resources = {
+            "cpu_pct": {name: round(entry["pct"], 1) for name, entry in cpu.items()},
+            "cpu_us_per_op": {name: round(entry["us_per_op"], 3) for name, entry in cpu.items()},
+            "peak_rss_kb": peak_rss,
+            "rss_growth_kb": max(0, peak_rss - rss_before),
+            "rss_before_kb": rss_before,
+            "rss_after_kb": _rss_kb(),
+            "pss_after_kb": _pss_kb(),
+        }
         payload = {
             "stage": case.name,
             "values": {k: round(v, 3) for k, v in values.items()},
+            "resources": resources,
             "runs": args.rounds,
             "unit": "op/s",
             "environment": env,
@@ -252,9 +334,11 @@ def main(argv: list[str] | None = None) -> int:
             json.dumps(payload, indent=2), encoding="utf-8"
         )
         ratio = values["cyjwt"] / values["pyjwt"] if values.get("pyjwt") else float("nan")
+        cpu_text = "/".join(f"{cpu[name]['pct']:.0f}%" for name in values)
         print(
             f"{case.name:20s} cyjwt {values['cyjwt']:12,.0f} op/s   "
             f"pyjwt {values['pyjwt']:12,.0f} op/s   ×{ratio:.2f}   "
+            f"cpu {cpu_text}   peak RSS {peak_rss / 1024:.1f} MB   "
             f"({time.perf_counter() - started:.1f}s)"
         )
 

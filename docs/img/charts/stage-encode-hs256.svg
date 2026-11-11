@@ -14,14 +14,14 @@
 <text x="710.0" y="168" font-size="10.5" fill="#666" text-anchor="middle">×2</text>
 <rect x="18" y="101" width="10" height="10" rx="2" fill="#c0392b"/>
 <text x="34" y="111" font-size="12" fill="#2b2b2b">cyjwt (Cython core)</text>
-<rect x="310" y="96" width="336.0" height="22" rx="3" fill="#c0392b"/>
-<text x="652.0" y="111" font-size="11.5" fill="#333">×1.68</text>
-<text x="698.5" y="111" font-size="11" fill="#666">109 545</text>
+<rect x="310" y="96" width="343.9" height="22" rx="3" fill="#c0392b"/>
+<text x="659.9" y="111" font-size="11.5" fill="#333">×1.72</text>
+<text x="706.4" y="111" font-size="11" fill="#666">112 206</text>
 <rect x="18" y="131" width="10" height="10" rx="2" fill="#2c3e50"/>
 <text x="34" y="141" font-size="12" fill="#2b2b2b" font-weight="700">PyJWT 2.15</text>
 <rect x="310" y="126" width="200.0" height="22" rx="3" fill="#2c3e50"/>
 <text x="516.0" y="141" font-size="11.5" fill="#c0392b" font-weight="700">×1.00</text>
-<text x="562.5" y="141" font-size="11" fill="#666">65 197</text>
+<text x="562.5" y="141" font-size="11" fill="#666">65 254</text>
 <text x="612.1" y="141" font-size="9.5" fill="#c0392b">← baseline</text>
 <text x="22" y="190" font-size="11" fill="#111" font-weight="600">bars: × to PyJWT=1.00, then absolute op/s (higher is better)</text>
 </svg>
