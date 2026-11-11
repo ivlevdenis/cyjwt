@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="841.2" height="472" viewBox="0 0 841.2 472" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">
+<rect width="841.2" height="472" fill="#ffffff"/>
+<text x="22" y="34" font-size="20" font-weight="700" fill="#111">Memory per stage (RSS)</text>
+<text x="22" y="56" font-size="12" fill="#555">peak VmRSS sampled every 10 ms; growth is peak - baseline RSS; both series share one process</text>
+<line x1="300.0" y1="96" x2="300.0" y2="418" stroke="#ececec" stroke-width="1"/>
+<text x="300.0" y="434" font-size="10.5" fill="#666" text-anchor="middle">0 MB</text>
+<line x1="407.5" y1="96" x2="407.5" y2="418" stroke="#ececec" stroke-width="1"/>
+<text x="407.5" y="434" font-size="10.5" fill="#666" text-anchor="middle">10 MB</text>
+<line x1="515.0" y1="96" x2="515.0" y2="418" stroke="#ececec" stroke-width="1"/>
+<text x="515.0" y="434" font-size="10.5" fill="#666" text-anchor="middle">20 MB</text>
+<line x1="622.5" y1="96" x2="622.5" y2="418" stroke="#ececec" stroke-width="1"/>
+<text x="622.5" y="434" font-size="10.5" fill="#666" text-anchor="middle">30 MB</text>
+<line x1="730.0" y1="96" x2="730.0" y2="418" stroke="#ececec" stroke-width="1"/>
+<text x="730.0" y="434" font-size="10.5" fill="#666" text-anchor="middle">40 MB</text>
+<rect x="22" y="112" width="8" height="8" rx="1.5" fill="#2c3e50"/>
+<text x="34" y="121" font-size="10" fill="#2b2b2b">HS256 encode — small claims payload</text>
+<rect x="300" y="108" width="397.1" height="18" rx="2" fill="#2c3e50"/>
+<text x="703.1" y="121" font-size="9.5" fill="#333">36.9 MB (+72 KB)</text>
+<rect x="22" y="136" width="8" height="8" rx="1.5" fill="#2c3e50"/>
+<text x="34" y="145" font-size="10" fill="#2b2b2b">HS256 decode — signature only</text>
+<rect x="300" y="132" width="398.5" height="18" rx="2" fill="#2c3e50"/>
+<text x="704.5" y="145" font-size="9.5" fill="#333">37.1 MB (+8 KB)</text>
+<rect x="22" y="160" width="8" height="8" rx="1.5" fill="#2c3e50"/>
+<text x="34" y="169" font-size="10" fill="#2b2b2b">HS256 decode — signature + aud/iss/exp</text>
+<rect x="300" y="156" width="398.5" height="18" rx="2" fill="#2c3e50"/>
+<text x="704.5" y="169" font-size="9.5" fill="#333">37.1 MB (+12 KB)</text>
+<rect x="22" y="184" width="8" height="8" rx="1.5" fill="#2c3e50"/>
+<text x="34" y="193" font-size="10" fill="#2b2b2b">HS256 encode — ~1 KB payload</text>
+<rect x="300" y="180" width="398.5" height="18" rx="2" fill="#2c3e50"/>
+<text x="704.5" y="193" font-size="9.5" fill="#333">37.1 MB (+4 KB)</text>
+<rect x="22" y="208" width="8" height="8" rx="1.5" fill="#2c3e50"/>
+<text x="34" y="217" font-size="10" fill="#2b2b2b">HS256 decode — ~1 KB payload</text>
+<rect x="300" y="204" width="398.7" height="18" rx="2" fill="#2c3e50"/>
+<text x="704.7" y="217" font-size="9.5" fill="#333">37.1 MB (+16 KB)</text>
+<rect x="22" y="232" width="8" height="8" rx="1.5" fill="#2c3e50"/>
+<text x="34" y="241" font-size="10" fill="#2b2b2b">HS512 encode — small claims payload</text>
+<rect x="300" y="228" width="398.7" height="18" rx="2" fill="#2c3e50"/>
+<text x="704.7" y="241" font-size="9.5" fill="#333">37.1 MB (+4 KB)</text>
+<rect x="22" y="256" width="8" height="8" rx="1.5" fill="#2c3e50"/>
+<text x="34" y="265" font-size="10" fill="#2b2b2b">HS512 decode — signature only</text>
+<rect x="300" y="252" width="398.7" height="18" rx="2" fill="#2c3e50"/>
+<text x="704.7" y="265" font-size="9.5" fill="#333">37.1 MB (+8 KB)</text>
+<rect x="22" y="280" width="8" height="8" rx="1.5" fill="#2c3e50"/>
+<text x="34" y="289" font-size="10" fill="#2b2b2b">RS256 encode — key object</text>
+<rect x="300" y="276" width="398.8" height="18" rx="2" fill="#2c3e50"/>
+<text x="704.8" y="289" font-size="9.5" fill="#333">37.1 MB (+8 KB)</text>
+<rect x="22" y="304" width="8" height="8" rx="1.5" fill="#2c3e50"/>
+<text x="34" y="313" font-size="10" fill="#2b2b2b">RS256 decode — key object</text>
+<rect x="300" y="300" width="399.0" height="18" rx="2" fill="#2c3e50"/>
+<text x="705.0" y="313" font-size="9.5" fill="#333">37.1 MB (+24 KB)</text>
+<rect x="22" y="328" width="8" height="8" rx="1.5" fill="#2c3e50"/>
+<text x="34" y="337" font-size="10" fill="#2b2b2b">ES256 encode — key object</text>
+<rect x="300" y="324" width="399.0" height="18" rx="2" fill="#2c3e50"/>
+<text x="705.0" y="337" font-size="9.5" fill="#333">37.1 MB (+8 KB)</text>
+<rect x="22" y="352" width="8" height="8" rx="1.5" fill="#2c3e50"/>
+<text x="34" y="361" font-size="10" fill="#2b2b2b">ES256 decode — key object</text>
+<rect x="300" y="348" width="399.1" height="18" rx="2" fill="#2c3e50"/>
+<text x="705.1" y="361" font-size="9.5" fill="#333">37.1 MB (+16 KB)</text>
+<rect x="22" y="376" width="8" height="8" rx="1.5" fill="#2c3e50"/>
+<text x="34" y="385" font-size="10" fill="#2b2b2b">EdDSA (Ed25519) encode — key object</text>
+<rect x="300" y="372" width="399.2" height="18" rx="2" fill="#2c3e50"/>
+<text x="705.2" y="385" font-size="9.5" fill="#333">37.1 MB (+8 KB)</text>
+<rect x="22" y="400" width="8" height="8" rx="1.5" fill="#2c3e50"/>
+<text x="34" y="409" font-size="10" fill="#2b2b2b">EdDSA (Ed25519) decode — key object</text>
+<rect x="300" y="396" width="399.3" height="18" rx="2" fill="#2c3e50"/>
+<text x="705.3" y="409" font-size="9.5" fill="#333">37.1 MB (+12 KB)</text>
+</svg>

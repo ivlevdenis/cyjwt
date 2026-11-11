@@ -40,7 +40,8 @@ Same-session comparison against PyJWT 2.15.1 (one process, best of 3 rounds).
 HS256 decode is ~2.5x faster, decode of a ~1 KB token ~5.4x, encode ~1.7x;
 asymmetric stages are dominated by `cryptography` (RS256 encode is 1.00x) and
 keep a smaller but consistent win on decode. Each stage also records CPU time
-per operation and peak RSS. Methodology, full tables and every stage chart:
+per operation and peak RSS (see `bench-cpu-time.svg` and `bench-memory.svg` in
+`docs/img/charts/`). Methodology, full tables and every stage chart:
 [docs/benchmarks.md](https://github.com/ivlevdenis/cyjwt/blob/main/docs/benchmarks.md).
 
 Memory footprint (import and steady state, with and without `cryptography`) is

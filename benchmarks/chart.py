@@ -365,14 +365,237 @@ def render_combined(
     return svg
 
 
-def load_results(results_dir: Path) -> tuple[dict[str, dict[str, float]], int]:
+def _abs_ticks(x_max: float) -> list[float]:
+    for step in (0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000):
+        count = round(x_max / step)
+        if 1 <= count <= 5:
+            return [i * step for i in range(count + 1)]
+    return [0.0, x_max]
+
+
+def _stages_with_resources(payloads: dict[str, dict[str, object]]) -> list[str]:
+    present = [
+        stage for stage, payload in payloads.items() if isinstance(payload.get("resources"), dict)
+    ]
+    ordered = [stage for stage in STAGE_ORDER if stage in present]
+    return ordered + [stage for stage in present if stage not in ordered]
+
+
+def render_cpu(payloads: dict[str, dict[str, object]], out_dir: Path) -> Path:
+    """Render CPU time per operation, grouped by stage (lower is better)."""
+    stages = _stages_with_resources(payloads)
+    rows = []
+    for stage in stages:
+        resources = payloads[stage]["resources"]
+        assert isinstance(resources, dict)
+        values = resources["cpu_us_per_op"]
+        assert isinstance(values, dict)
+        rows.append((stage, values))
+    if not rows:
+        raise SystemExit("no resources.cpu_us_per_op in results; re-run benchmarks/bench.py")
+
+    peak = max(max(values.values()) for _, values in rows)
+    x_max = max(_abs_ticks(peak * 1.1)[-1], 1.0)
+    ticks = _abs_ticks(x_max)
+
+    bar_h, bar_gap = 12, 2
+    group_head, group_gap = 22, 24
+    x0, plot_w = 320, 400
+    head, foot = 128, 60
+    app_rows = len(PALETTE)
+    group_h = group_head + app_rows * (bar_h + bar_gap) - bar_gap
+    height = head + len(rows) * (group_h + group_gap) - group_gap + foot
+
+    def sx(value: float) -> float:
+        return x0 + value / x_max * plot_w
+
+    labels_need = max(
+        LABEL_GAP
+        + text_width(f"×{values[BASELINE] / values['cyjwt']:.2f}", 9.5)
+        + RATIO_VALUE_GAP
+        + text_width(f"{values['cyjwt']:.1f} µs", 9.5)
+        for _, values in rows
+        if "cyjwt" in values and BASELINE in values
+    )
+    width = max(
+        x0 + plot_w + 70,
+        sx(x_max) + labels_need + EDGE_PAD,
+        44 + text_width("CPU time per operation", 20) + 22,
+    )
+
+    out: list[str] = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
+        f'viewBox="0 0 {width} {height}" font-family="{FONT}">',
+        f'<rect width="{width}" height="{height}" fill="#ffffff"/>',
+        '<text x="22" y="34" font-size="20" font-weight="700" fill="#111">'
+        "CPU time per operation</text>",
+        '<text x="22" y="56" font-size="12" fill="#555">process_time() / operation; '
+        "lower is better; × is PyJWT time / cyjwt time (same machine)</text>",
+    ]
+    for i, (_, label, colour) in enumerate(PALETTE):
+        lx, ly = 22 + i * 290, 80
+        out.append(f'<rect x="{lx}" y="{ly - 8}" width="9" height="9" rx="2" fill="{colour}"/>')
+        out.append(
+            f'<text x="{lx + 13}" y="{ly}" font-size="10.5" fill="#333">{_esc(label)}</text>'
+        )
+    for tick in ticks:
+        x = sx(tick)
+        out.append(
+            f'<line x1="{x:.1f}" y1="{head - 12}" x2="{x:.1f}" '
+            f'y2="{height - foot + 4}" stroke="#ececec" stroke-width="1"/>'
+        )
+        out.append(
+            f'<text x="{x:.1f}" y="{height - foot + 20}" font-size="10.5" '
+            f'fill="#666" text-anchor="middle">{tick:g} µs</text>'
+        )
+
+    for gi, (stage, values) in enumerate(rows):
+        top = head + gi * (group_h + group_gap)
+        out.append(
+            f'<text x="22" y="{top + 1}" font-size="12.5" font-weight="700" '
+            f'fill="#111">{_esc(stage_title(stage))}</text>'
+        )
+        for ai, (app, label, colour) in enumerate(PALETTE):
+            if app not in values:
+                continue
+            value = values[app]
+            y = top + group_head + ai * (bar_h + bar_gap)
+            mid = y + bar_h - 3
+            out.append(f'<rect x="22" y="{y + 2}" width="7" height="7" rx="1.5" fill="{colour}"/>')
+            weight = ' font-weight="700"' if app == BASELINE else ""
+            out.append(
+                f'<text x="34" y="{mid}" font-size="10" fill="#2b2b2b"{weight}>'
+                f"{_esc(SHORT_LABELS.get(app, label))}</text>"
+            )
+            end = sx(value)
+            out.append(
+                f'<rect x="{x0}" y="{y}" width="{max(end - x0, 1.2):.1f}" '
+                f'height="{bar_h}" rx="2" fill="{colour}"/>'
+            )
+            ratio_text = (
+                f"×{values[BASELINE] / values['cyjwt']:.2f}"
+                if app == "cyjwt" and BASELINE in values
+                else ""
+            )
+            x_label = end + LABEL_GAP
+            if ratio_text:
+                out.append(
+                    f'<text x="{x_label:.1f}" y="{mid}" font-size="9.5" fill="#333">'
+                    f"{ratio_text}</text>"
+                )
+                x_label += text_width(ratio_text, 9.5) + RATIO_VALUE_GAP
+            value_text = f"{value:.1f} µs"
+            out.append(
+                f'<text x="{x_label:.1f}" y="{mid}" font-size="9.5" fill="#666">{value_text}</text>'
+            )
+            _require_fits("value", value_text, x_label + text_width(value_text, 9.5), width)
+
+    out.append(
+        f'<text x="22" y="{height - 16}" font-size="11" fill="#111" '
+        f'font-weight="600">both series saturate one core (~100% CPU); '
+        f"this chart compares the CPU cost of each operation</text>"
+    )
+    out.append("</svg>")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    svg = out_dir / "bench-cpu-time.svg"
+    svg.write_text("\n".join(out), encoding="utf-8")
+    _export_png(svg)
+    return svg
+
+
+def render_memory(payloads: dict[str, dict[str, object]], out_dir: Path) -> Path:
+    """Render peak RSS and RSS growth per stage (stage-wide, one process)."""
+    stages = _stages_with_resources(payloads)
+    rows = []
+    for stage in stages:
+        resources = payloads[stage]["resources"]
+        assert isinstance(resources, dict)
+        rows.append(
+            (
+                stage,
+                float(resources["peak_rss_kb"]) / 1024.0,
+                int(resources["rss_growth_kb"]),
+            )
+        )
+    if not rows:
+        raise SystemExit("no resources.peak_rss_kb in results; re-run benchmarks/bench.py")
+
+    x_max = float(round(max(value for _, value, _ in rows) * 1.15 / 10) * 10 or 10)
+    ticks = _abs_ticks(x_max)
+    bar_h, gap = 18, 6
+    x0, plot_w = 300, 430
+    head, foot = 108, 58
+    height = head + len(rows) * (bar_h + gap) - gap + foot
+
+    def sx(value: float) -> float:
+        return x0 + value / x_max * plot_w
+
+    labels_need = max(
+        LABEL_GAP + text_width(f"{value:.1f} MB (+{growth} KB)", 9.5) for _, value, growth in rows
+    )
+    width = max(
+        x0 + plot_w + 70,
+        sx(x_max) + labels_need + EDGE_PAD,
+        44 + text_width("Memory per stage (RSS)", 20) + 22,
+    )
+    out: list[str] = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
+        f'viewBox="0 0 {width} {height}" font-family="{FONT}">',
+        f'<rect width="{width}" height="{height}" fill="#ffffff"/>',
+        '<text x="22" y="34" font-size="20" font-weight="700" fill="#111">'
+        "Memory per stage (RSS)</text>",
+        '<text x="22" y="56" font-size="12" fill="#555">peak VmRSS sampled every '
+        "10 ms; growth is peak - baseline RSS; both series share one process</text>",
+    ]
+    for tick in ticks:
+        x = sx(tick)
+        out.append(
+            f'<line x1="{x:.1f}" y1="{head - 12}" x2="{x:.1f}" '
+            f'y2="{height - foot + 4}" stroke="#ececec" stroke-width="1"/>'
+        )
+        out.append(
+            f'<text x="{x:.1f}" y="{height - foot + 20}" font-size="10.5" '
+            f'fill="#666" text-anchor="middle">{tick:g} MB</text>'
+        )
+    for i, (stage, value, growth) in enumerate(rows):
+        y = head + i * (bar_h + gap)
+        mid = y + bar_h - 5
+        out.append(f'<rect x="22" y="{y + 4}" width="8" height="8" rx="1.5" fill="#2c3e50"/>')
+        out.append(
+            f'<text x="34" y="{mid}" font-size="10" fill="#2b2b2b">'
+            f"{_esc(stage_title(stage))}</text>"
+        )
+        end = sx(value)
+        out.append(
+            f'<rect x="{x0}" y="{y}" width="{max(end - x0, 1.5):.1f}" '
+            f'height="{bar_h}" rx="2" fill="#2c3e50"/>'
+        )
+        text = f"{value:.1f} MB (+{growth} KB)"
+        out.append(
+            f'<text x="{end + LABEL_GAP:.1f}" y="{mid}" font-size="9.5" fill="#333">{text}</text>'
+        )
+        _require_fits("value", text, end + LABEL_GAP + text_width(text, 9.5), width)
+
+    out.append("</svg>")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    svg = out_dir / "bench-memory.svg"
+    svg.write_text("\n".join(out), encoding="utf-8")
+    _export_png(svg)
+    return svg
+
+
+def load_results(
+    results_dir: Path,
+) -> tuple[dict[str, dict[str, float]], dict[str, dict[str, object]], int]:
     results: dict[str, dict[str, float]] = {}
+    payloads: dict[str, dict[str, object]] = {}
     runs = 0
     for path in sorted(results_dir.glob("stage-*.json")):
         payload = json.loads(path.read_text(encoding="utf-8"))
         results[payload["stage"]] = payload["values"]
+        payloads[payload["stage"]] = payload
         runs = max(runs, int(payload.get("runs", 1)))
-    return results, runs
+    return results, payloads, runs
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -387,7 +610,7 @@ def main(argv: list[str] | None = None) -> None:
         else root / "docs" / "img" / "charts"
     )
 
-    results, runs = load_results(results_dir)
+    results, payloads, runs = load_results(results_dir)
     if not results:
         raise SystemExit(f"no stage-*.json in {results_dir}; run benchmarks/bench.py first")
 
@@ -403,8 +626,12 @@ def main(argv: list[str] | None = None) -> None:
     svg = render_combined(results, charts_dir, subtitle=f"best of {runs} rounds")
     print(f"{'combined':20s} → {svg}")
 
+    for name, renderer in (("cpu-time", render_cpu), ("memory", render_memory)):
+        svg = renderer(payloads, charts_dir)
+        print(f"{name:20s} → {svg}")
+
     if check_only:
-        print(f"layout ok: {len(results) + 1} charts, labels fit")
+        print(f"layout ok: {len(results) + 3} charts, labels fit")
 
 
 if __name__ == "__main__":

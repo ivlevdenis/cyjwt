@@ -82,7 +82,9 @@ the stage. A single-threaded Python loop saturates one core, so utilisation is
 Peak RSS stays at 36.9-37.1 MB for every stage (interpreter + `cryptography`
 import dominates), and RSS growth during a stage is at most 72 KB, i.e. the
 allocator reaches steady state with no per-stage leak. Raw numbers are in
-`benchmarks/results/stage-*.json` (`resources` object).
+`benchmarks/results/stage-*.json` (`resources` object). Charts:
+[bench-cpu-time.svg](img/charts/bench-cpu-time.svg) and
+[bench-memory.svg](img/charts/bench-memory.svg).
 
 ## Where the difference comes from
 
@@ -178,6 +180,8 @@ python benchmarks/memory.py --python /path/to/venv/bin/python --markdown
 | Stage | SVG |
 |---|---|
 | combined | [bench-cyjwt-vs-pyjwt.svg](img/charts/bench-cyjwt-vs-pyjwt.svg) |
+| CPU time per op | [bench-cpu-time.svg](img/charts/bench-cpu-time.svg) |
+| memory per stage | [bench-memory.svg](img/charts/bench-memory.svg) |
 | `encode-hs256` | [stage-encode-hs256.svg](img/charts/stage-encode-hs256.svg) |
 | `decode-hs256` | [stage-decode-hs256.svg](img/charts/stage-decode-hs256.svg) |
 | `decode-hs256-claims` | [stage-decode-hs256-claims.svg](img/charts/stage-decode-hs256-claims.svg) |
