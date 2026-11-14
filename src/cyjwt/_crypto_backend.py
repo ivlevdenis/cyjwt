@@ -42,6 +42,26 @@ from cryptography.hazmat.primitives.serialization import (
     load_ssh_public_key,
 )
 
+
+def is_der_key(key: bytes | bytearray | memoryview) -> bool:
+    """Return True when ``key`` is a DER public key or DER x509 certificate.
+
+    Unrecognised input returns False; the loaders' own rejections are the
+    control flow, so nothing is swallowed silently.
+    """
+    return _probe_der_key(bytes(key) if not isinstance(key, bytes) else key)
+
+
+def _probe_der_key(key: bytes) -> bool:
+    for loader in (load_der_public_key, x509.load_der_x509_certificate):
+        try:
+            loader(key)
+        except (TypeError, ValueError, UnsupportedAlgorithm):
+            continue
+        return True
+    return False
+
+
 __all__ = [
     "ECDSA",
     "InvalidSignature",
@@ -87,22 +107,6 @@ def curve_class(name: str) -> type:
         return _CURVES[name]
     except KeyError:
         raise ValueError(f"Unsupported curve: {name}") from None
-
-
-def is_der_key(key: bytes) -> bool:
-    """Return True when ``key`` is a DER public key or DER x509 certificate.
-
-    Both loaders signal "not this format" with one of the caught exceptions;
-    that is their documented contract, so continuing to the next probe is the
-    intended control flow rather than swallowed failure.
-    """
-    for loader in (load_der_public_key, x509.load_der_x509_certificate):
-        try:
-            loader(key)
-        except (TypeError, ValueError, UnsupportedAlgorithm):
-            continue
-        return True
-    return False
 
 
 def der_to_raw_signature(der_sig: bytes, key_size: int) -> bytes:

@@ -8,13 +8,11 @@
 
 Everything here is byte-oriented and has no third-party dependencies:
 
-- ``b64url_encode`` / ``b64url_decode``: unpadded base64url (RFC 7515 §2),
-  single allocation, C-level loop;
-- ``split_jws``: splits a compact JWS in one pass;
-- ``hmac_sign`` / ``hmac_verify``: HMAC via the stdlib C implementation, with
-  a constant-time comparison done in C;
-- ``looks_like_asymmetric_key``: cheap guard so an RSA/EC PEM or SSH key can
-  never be silently used as an HMAC secret (algorithm-confusion defence).
+- ``b64url_encode`` / ``b64url_decode``: unpadded base64url (RFC 7515 §2);
+- ``split_jws``: compact JWS header/payload/signature split;
+- ``hmac_sign`` / ``hmac_verify``: HMAC with a constant-time comparison;
+- ``looks_like_pem`` / ``looks_like_asymmetric_key``: key-shape predicates;
+- ``looks_like_jwk``: JSON containing a ``kty`` member.
 
 The Python API lives in ``api_jws.py`` / ``api_jwt.py``.
 """
@@ -125,15 +123,12 @@ def b64url_encode(bytes data):
 
 
 def b64url_decode(bytes data):
-    """Decode base64url ``data``.
+    """Decode base64url ``data``; strict, canonical form only.
 
-    Trailing ``=`` padding is tolerated (1 or 2 characters); padding elsewhere,
-    characters outside the base64url alphabet, lengths that are 1 mod 4, and
-    a padded length that is not a multiple of 4 raise ``ValueError``.
-
-    The decode is strict: unlike ``binascii``/``base64.urlsafe_b64decode`` it
-    never silently drops stray characters, so a corrupted segment cannot
-    decode to attacker-chosen bytes.
+    One or two trailing ``=`` are tolerated; padding elsewhere, characters
+    outside the base64url alphabet, a length of 1 mod 4, and a padded length
+    that is not a multiple of 4 raise ``ValueError``. Unused trailing bits must
+    be zero, so a segment cannot decode to bytes other than the ones encoded.
     """
     cdef Py_ssize_t n = len(data)
     cdef Py_ssize_t eff = n
@@ -260,12 +255,90 @@ cdef tuple _ASYMMETRIC_PREFIXES = (
     b"ecdsa-sha2-nistp521",
 )
 
+# PEM labels recognised by PyJWT 2.15.
+cdef tuple _PEM_LABELS = (
+    b"CERTIFICATE",
+    b"TRUSTED CERTIFICATE",
+    b"PRIVATE KEY",
+    b"PUBLIC KEY",
+    b"ENCRYPTED PRIVATE KEY",
+    b"OPENSSH PRIVATE KEY",
+    b"DSA PRIVATE KEY",
+    b"RSA PRIVATE KEY",
+    b"RSA PUBLIC KEY",
+    b"EC PRIVATE KEY",
+    b"DH PARAMETERS",
+    b"NEW CERTIFICATE REQUEST",
+    b"CERTIFICATE REQUEST",
+    b"SSH2 PUBLIC KEY",
+    b"SSH2 ENCRYPTED PRIVATE KEY",
+    b"X509 CRL",
+)
+
+
+def looks_like_pem(bytes key):
+    """Return True when ``key`` holds a matched BEGIN/END PEM block.
+
+    A marker is ``----[- ](BEGIN|END) <known label>[- ]----``; the ``END`` of a
+    label must start after its ``BEGIN``. Only markers are inspected, the body
+    is not parsed.
+    """
+    cdef dict begins = {}
+    cdef Py_ssize_t n = len(key)
+    cdef Py_ssize_t i = key.find(b"----")
+    cdef Py_ssize_t j
+    cdef Py_ssize_t k
+    cdef Py_ssize_t m
+    cdef int kind
+    cdef object label
+
+    while i >= 0:
+        j = i + 4
+        if j < n and (key[j : j + 1] == b"-" or key[j : j + 1] == b" "):
+            k = j + 1
+            if key[k : k + 5] == b"BEGIN":
+                kind = 1
+                k += 5
+            elif key[k : k + 3] == b"END":
+                kind = 2
+                k += 3
+            else:
+                kind = 0
+            if kind and key[k : k + 1] == b" ":
+                k += 1
+                for label in _PEM_LABELS:
+                    if not key.startswith(label, k):
+                        continue
+                    m = k + len(label)
+                    if key[m : m + 1] in (b"-", b" ") and key[m + 1 : m + 5] == b"----":
+                        if kind == 1:
+                            begins[label] = i
+                        elif label in begins and i > begins[label]:
+                            return True
+                    break
+        i = key.find(b"----", i + 1)
+    return False
+
+
+def looks_like_asymmetric_key(bytes key):
+    """Return True if ``key`` looks like a PEM/SSH/asymmetric key.
+
+    SSH by ``startswith`` of the known prefixes; PEM by a matched BEGIN/END
+    marker pair.
+    """
+    cdef object prefix
+    for prefix in _ASYMMETRIC_PREFIXES:
+        if key.startswith(prefix):
+            return True
+    if key.find(b"----") < 0:
+        return False
+    return looks_like_pem(key)
+
 
 def looks_like_jwk(bytes key):
-    """Return True if ``key`` is JSON containing a ``kty`` member.
+    """Return True if ``key`` is JSON containing a ``kty`` member anywhere.
 
-    Raw JWK JSON is not secret material, so it must not be used as an HMAC key;
-    the caller has to extract ``"k"`` first (PyJWT 2.15 parity).
+    Non-JSON and JSON without ``kty`` return False.
     """
     cdef object obj
     cdef list stack
@@ -290,17 +363,3 @@ def looks_like_jwk(bytes key):
         elif isinstance(current, list):
             stack.extend(current)
     return False
-
-
-def looks_like_asymmetric_key(bytes key):
-    """Return True if ``key`` looks like a PEM/SSH/asymmetric key.
-
-    Used to refuse asymmetric keys as HMAC secrets (algorithm-confusion
-    defence). Detection is deliberately broad on the PEM side: any
-    ``-----BEGIN ...-----`` marker counts.
-    """
-    cdef object prefix
-    for prefix in _ASYMMETRIC_PREFIXES:
-        if key.startswith(prefix):
-            return True
-    return key.find(b"-----BEGIN ") >= 0

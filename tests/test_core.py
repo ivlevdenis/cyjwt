@@ -106,7 +106,8 @@ class TestAsymmetricKeyDetection:
         "key",
         [
             b"-----BEGIN PUBLIC KEY-----\nMIIB...\n-----END PUBLIC KEY-----",
-            b"-----BEGIN RSA PRIVATE KEY-----\n...",
+            b"-----BEGIN RSA PRIVATE KEY-----\nMIIE...\n-----END RSA PRIVATE KEY-----",
+            b"---- BEGIN CERTIFICATE ----\nMIIB...\n---- END CERTIFICATE ----",
             b"ssh-rsa AAAAB3NzaC1yc2E...",
             b"ssh-ed25519 AAAAC3NzaC1lZDI1...",
             b"ecdsa-sha2-nistp256 AAAAE2Vj...",
@@ -114,6 +115,19 @@ class TestAsymmetricKeyDetection:
     )
     def test_detects(self, key: bytes) -> None:
         assert _core.looks_like_asymmetric_key(key) is True
+
+    @pytest.mark.parametrize(
+        "key",
+        [
+            # PyJWT parity: a lone marker, an unknown label, or END before BEGIN
+            # is not a key, so it stays usable as an HMAC secret.
+            b"-----BEGIN RSA PRIVATE KEY-----\n...",
+            b"-----BEGIN FOO-----\n...\n-----END FOO-----",
+            b"-----END PUBLIC KEY-----AAAA-----BEGIN PUBLIC KEY-----",
+        ],
+    )
+    def test_not_a_key(self, key: bytes) -> None:
+        assert _core.looks_like_asymmetric_key(key) is False
 
     @pytest.mark.parametrize("key", [b"secret", b"", b"not-a-key"])
     def test_plain_secret(self, key: bytes) -> None:
