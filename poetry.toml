@@ -1,0 +1,6 @@
+# Poetry and pyenv split the work: pyenv provides the interpreter and the project
+# virtualenv (`pyenv virtualenv 3.14.0 cyjwt`), poetry installs dependencies into
+# whichever env is active. Activate the pyenv env before `poetry install`.
+[virtualenvs]
+prefer-active-python = true
+in-project = false

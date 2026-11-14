@@ -65,6 +65,27 @@ cyjwt = ["*.c"]
 [tool.setuptools.dynamic]
 version = { attr = "cyjwt._version.__version__" }
 
+# ── Poetry ────────────────────────────────────────────────────────────
+# Poetry owns the environment and the dependency graph (poetry.lock); it does not
+# install the project itself (package-mode = false), because the Cython extension
+# is built by setuptools:
+#   pyenv activate cyjwt && poetry install --all-extras && python -m pip install -e .
+[tool.poetry]
+package-mode = false
+
+[tool.poetry.group.dev.dependencies]
+build = ">=1.2"
+cryptography = ">=3.4"
+cython = ">=3.0.11"
+mypy = ">=1.10"
+pyjwt = "==2.15.1"
+pytest = ">=8.0"
+pytest-cov = ">=5.0"
+ruff = ">=0.5"
+# Needed in the env itself to rebuild the extension in place:
+#   poetry run python setup.py build_ext --inplace
+setuptools = ">=77"
+
 [tool.pytest.ini_options]
 minversion = "8.0"
 testpaths = ["tests"]
